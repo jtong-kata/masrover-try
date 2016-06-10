@@ -1,0 +1,75 @@
+<project name="Code Review" default="function-test" basedir=".">
+    <description>ThoughtWorks Code Review</description>
+
+    <property file="build.properties"/>
+
+    <fail message="Please specify problem in build.properties file" unless="problem"/>
+
+    <property name="main.src.path"           location="src/main"/>
+    <property name="test.src.path"           location="src/test"/>
+    <property name="test.case.input.path"    location="cases/input/${problem}"/>
+    <property name="test.case.result.path"   location="cases/result/${problem}"/>
+    <property name="lib.path"                location="lib"/>
+    <property name="build.path"              location="target"/>
+    <property name="main.bin.path"           location="target/classes"/>
+    <property name="test.bin.path"           location="target/test-classes"/>
+    <property name="test.report.path"        location="target/test-reports"/>
+
+    <path id="lib.classpath">
+        <fileset dir="${lib.path}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="init">
+        <delete dir="${build.path}"/>
+        <mkdir  dir="${test.src.path}"/>
+        <mkdir  dir="${build.path}"/>
+        <mkdir  dir="${main.bin.path}"/>
+        <mkdir  dir="${test.bin.path}"/>
+        <mkdir  dir="${test.report.path}"/>
+    </target>
+
+    <target name="compile" depends="init">
+        <javac srcdir="${main.src.path}" destdir="${main.bin.path}" includeantruntime="true" source="1.7" target="1.7">
+            <classpath refid="lib.classpath"/>
+        </javac>
+    </target>
+
+    <target name="test" depends="compile">
+        <javac srcdir="${test.src.path}" destdir="${test.bin.path}" includeantruntime="true" source="1.7" target="1.7">
+            <classpath path="${main.bin.path}"/>
+            <classpath refid="lib.classpath"/>
+        </javac>
+        <junit printsummary="true">
+            <classpath path="${main.bin.path}"/>
+            <classpath path="${test.bin.path}"/>
+            <classpath refid="lib.classpath"/>
+            <formatter type="xml"/>            
+            <batchtest todir="${test.report.path}">
+                <fileset dir="${test.src.path}" includes="**/*Test.java" />
+            </batchtest>
+        </junit>
+    </target>
+
+    <target name="function-test" depends="test">
+        <antcall target="run-function-test">
+            <param name="input" value="${test.case.input.path}/input.txt"/>
+            <param name="output" value="${build.path}/output.txt"/>
+            <param name="expected" value="${test.case.result.path}/result.txt"/>
+        </antcall>
+    </target>
+
+    <target name="run-function-test">
+        <java classname="com.thoughtworks.codereview.Main" failonerror="true">
+            <classpath path="${main.bin.path}"/>
+            <classpath refid="lib.classpath"/>
+            <arg value="${input}"/>
+            <arg value="${output}"/>
+        </java>
+        <condition property="matched">
+            <filesmatch file1="${expected}" file2="${output}"/>
+        </condition>
+        <fail message="The output of your solution does not match the expected result. Make sure you have implemented com.thoughtworks.codereview.Main properly. The main method should take two arguments. First is the path of a input data file, and second is the path of your output file. Make sure the output your solution generated is same as ${expected}" unless="matched"/>
+    </target>
+</project>
